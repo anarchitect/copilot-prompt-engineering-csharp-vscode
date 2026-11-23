@@ -230,7 +230,7 @@ Use an output contract when you need a reviewable answer, not another code edit.
    ```text
    Rewrite as three beginner-friendly bullets: Cause, Change, Check.
    One sentence each; include a test command and expected example.
-   No file edits. Don't claim unrun tests passed.
+   No file edits. Flag unverified claims; don't claim unrun tests passed.
    ```
 
 3. Check the format and facts against the files. Run `dotnet test` yourself.
