@@ -46,11 +46,11 @@ try {
 
     Test-Stage 'starter' 1 0 | Out-Null
     Copy-Fresh 'CalculatorTests.cs' $tests
-    Test-Stage 'exercise-1' 10 0 | Out-Null
+    Test-Stage 'exercise-1' 11 0 | Out-Null
 
     $slugHash = (Get-FileHash (Join-Path $src 'Slug.cs')).Hash
     Copy-Fresh 'SlugTests.cs' $tests
-    $trx = Test-Stage 'exercise-2' 15 3
+    $trx = Test-Stage 'exercise-2' 16 3
     if ((Get-FileHash (Join-Path $src 'Slug.cs')).Hash -ne $slugHash) {
         throw 'Exercise 2 changed Slug.cs.'
     }
@@ -67,7 +67,7 @@ try {
         $beforeRepair[$_.Name] = (Get-FileHash $_.FullName).Hash
     }
     Copy-Fresh 'Slug.cs' $src
-    Test-Stage 'exercise-3' 18 0 | Out-Null
+    Test-Stage 'exercise-3' 19 0 | Out-Null
     foreach ($file in Get-ChildItem $tests -Filter '*.cs') {
         if ($beforeRepair[$file.Name] -ne (Get-FileHash $file.FullName).Hash) {
             throw "The repair changed tests in $($file.Name)."
@@ -76,7 +76,7 @@ try {
 
     Copy-Fresh 'Calculator.cs' $src
     Copy-Fresh 'RemainderTests.cs' $tests
-    Test-Stage 'optional-remainder' 21 0 | Out-Null
+    Test-Stage 'optional-remainder' 22 0 | Out-Null
 
     Write-Host 'Solution check passed.'
 }

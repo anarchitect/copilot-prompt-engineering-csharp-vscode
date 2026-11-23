@@ -2,7 +2,7 @@ namespace PromptLab.Tests;
 
 public class CalculatorTests
 {
-    // One-shot example from Exercise 1, step 5.
+    // One-shot example from Exercise 1.
     [Theory]
     [InlineData(2, 3, 5)]
     [InlineData(-4, 1, -3)]
@@ -31,6 +31,7 @@ public class CalculatorTests
     [Theory]
     [InlineData(6, 3, 2)]
     [InlineData(7, 2, 3)]
+    [InlineData(-7, 2, -3)]
     public void Divide_ReturnsQuotient(int a, int b, int expected)
     {
         Assert.Equal(expected, Calculator.Divide(a, b));
