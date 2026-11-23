@@ -77,6 +77,10 @@ Steps:
    **Local** names a different, deprecated harness. Review approvals before
    choosing **Allow Once**. Some commands run without a prompt.
 
+   Can't see the agent picker? Select **Add Context → Agent… → Ask**.
+   Once selected, click the **Ask** button to switch to **Agent**.
+   **Interactive** and **Plan** are separate controls in the mode menu.
+
 > Checkpoint 1: `dotnet test` reports `Passed: 1`. Choose **Copilot** before sending the first chat prompt.
 
 What's in the project:
@@ -347,6 +351,11 @@ It checks the starter, each core code checkpoint, and the optional remainder imp
 These counts describe the supplied reference tests, not every possible Copilot response.
 The checks do not invoke Copilot or verify VS Code controls, response wording, or instruction loading.
 The CI workflow runs the build, starter tests, and script on Windows and Linux; the learner steps remain Windows-focused.
+
+A live VS Code 1.147 Chat trial confirmed the Copilot harness, Ask selection,
+file attachments, and a read-only test suggestion without file edits.
+A recurring Settings modal interrupted further UI automation.
+The complete Chat exercise and optional steps are not yet UI-verified.
 
 ## Quick reference
 
