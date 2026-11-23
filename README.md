@@ -24,14 +24,9 @@ You will practise:
 
 ## The prompt recipe
 
-Use this checklist for every prompt in this exercise. It comes from GitHub's
+Keep prompts short: name the task, attach context, and state the boundary and check.
+Add an example when it helps. This follows GitHub's
 [prompt engineering guidance](https://docs.github.com/copilot/concepts/prompting-and-context/prompt-engineering).
-
-1. Goal: start with what you want, then list the details. Put important requirements first.
-2. Context: attach the files the answer needs.
-3. Examples: give sample inputs and outputs, or a sample test.
-4. Constraints: say what must not change. Split larger tasks into steps.
-5. Check: say how to verify the result, such as "run `dotnet test`". Review it yourself.
 
 ---
 
@@ -111,15 +106,12 @@ Both use your attached code as context. Compare them in Chat before applying edi
 
    ```text
    Suggest xUnit tests for Calculator.Subtract. Do not edit files.
-   Follow this example's naming and parameterized test style:
+   Use this style:
 
    [Theory]
    [InlineData(2, 3, 5)]
-   [InlineData(-4, 1, -3)]
    public void Add_ReturnsSum(int a, int b, int expected)
-   {
-       Assert.Equal(expected, Calculator.Add(a, b));
-   }
+       => Assert.Equal(expected, Calculator.Add(a, b));
    ```
 
 4. Compare the responses. Did the example change the style or cases?
@@ -127,12 +119,9 @@ Both use your attached code as context. Compare them in Chat before applying edi
 5. In the second chat, select **Agent** and send:
 
    ```text
-   Add tests for Add, Subtract, Multiply and Divide in
-   tests/PromptLab.Tests/CalculatorTests.cs only, using the example's style.
-   Include positive and negative inputs, 7 / 2 = 3, and -7 / 2 = -3.
-   Use Assert.Throws<DivideByZeroException> for a zero divisor.
-   Do not change production code, SlugTests.cs, or dependencies.
-   Run dotnet test and report the actual results.
+   Test all Calculator methods in CalculatorTests.cs only, using that style.
+   Cover positive/negative inputs, 7 / 2 = 3, -7 / 2 = -3, and division by zero.
+   Run dotnet test; report results.
    ```
 
 6. Review the test diff in Chat. In the VS Code terminal, run:
@@ -163,33 +152,17 @@ A vague prompt leaves requirements unstated. Tests based on existing behavior ca
    ```
 
 2. Read the answer. Which details came from the repository, and which did Copilot assume? Did it test what `Slug.Create` should do, or what it does today? Don't apply anything.
-3. Start a new chat (`Ctrl+N`) and set the agent to **Agent**. Type `#` and choose `src/PromptLab/Slug.cs`, then type `#` again and choose `tests/PromptLab.Tests/SlugTests.cs` (not the copies in `solution/`). Then paste and send:
+3. Start a new **Agent** chat. Attach `src/PromptLab/Slug.cs`,
+   `tests/PromptLab.Tests/SlugTests.cs`, and [`docs/slug-spec.md`](docs/slug-spec.md).
+   Read the spec, then send:
 
    ```text
-   Add xUnit tests for Slug.Create to tests/PromptLab.Tests/SlugTests.cs.
-
-   Required behaviour (this is the spec, not what the code does today):
-   - Return lowercase. Keep only letters a-z and digits 0-9.
-   - Replace each run of other characters with a single hyphen.
-   - Never start or end with a hyphen.
-   - Throw ArgumentNullException for null.
-
-   Examples (title -> slug):
-   "Hello World" -> "hello-world"
-   "  Hello,   World!  " -> "hello-world"
-   "Hello,World" -> "hello-world"
-   "C# & .NET 10" -> "c-net-10"
-   "Top 10 Tips" -> "top-10-tips"
-   "" -> ""
-   "!!!" -> ""
-
-   Use one [Theory] with [InlineData] for the examples and a [Fact] for null.
-   Keep the existing passing test. Do not add dependencies.
-   Step 1 only: change only that test file. Do not change src/PromptLab/Slug.cs, even if tests fail.
-   Run dotnet test and tell me which tests fail.
+   Add tests for every slug-spec.md case in SlugTests.cs only.
+   Keep the existing test. Use a theory for examples and a fact for null.
+   Run dotnet test; report failures. Don't fix production code yet.
    ```
 
-   Compare this prompt with the recipe: goal, attached files, examples, a file boundary, and a test command.
+   The attached spec supplies the examples without making you type them.
 
 4. Review and approve the `dotnet test` command if asked. Inspect the diff of `SlugTests.cs` from the response. The experimental editor working set above the chat input offers **Keep** and **Undo** for tracked edits. Edits are already saved; **Keep** clears the pending-review state.
    Also run these commands, because edits made through terminal commands might not appear in that list:
@@ -222,13 +195,12 @@ Give Copilot the exact failure text, not "it's broken", and limit what it may ch
 2. In the **same** chat (it already knows the task), type this prompt, pasting your failure output where shown:
 
    ```text
-   Step 2: dotnet test fails with:
+   Fix these failures:
 
    <paste the failure output here>
 
-   Fix Slug.Create so all tests pass.
-   Change only src/PromptLab/Slug.cs, keep the method signature, and do not edit any tests.
-   Run dotnet test and explain the fix in two sentences.
+   Edit Slug.cs only; keep its public API and all tests unchanged.
+   Follow the spec. Run dotnet test; explain the fix in two sentences.
    ```
 
 3. Review any requested actions. Inspect the `Slug.cs` diff and keep it only if it meets the spec.
@@ -256,14 +228,9 @@ Use an output contract when you need a reviewable answer, not another code edit.
 2. Read the answer, then ask it to revise that response:
 
    ```text
-   Rewrite your explanation for a beginner reviewing this repair.
-   Return exactly three bullets, in this order:
-   - Cause: explain the original bug in one sentence.
-   - Change: explain how the repaired code handles separators in one sentence.
-   - Check: give the command I should run and one test example with its expected result.
-   No code blocks or introductory paragraph. Do not edit files.
-   Do not claim you ran tests. If a claim is not supported by the attached files
-   or this conversation, say what needs checking instead of inventing evidence.
+   Rewrite as three beginner-friendly bullets: Cause, Change, Check.
+   One sentence each; include a test command and expected example.
+   No file edits. Flag unverified claims; don't claim unrun tests passed.
    ```
 
 3. Check the format and facts against the files. Run `dotnet test` yourself.
@@ -276,44 +243,36 @@ Custom instructions store reusable project guidance for chat requests.
 They do not affect ghost text and do not guarantee compliance.
 Existing tests already show a style, so matching that style does not by itself prove the instructions were used.
 
+Keep instructions short and reusable, as GitHub's
+[custom-instructions guidance](https://docs.github.com/en/copilot/concepts/prompting-and-context/custom-instructions#using-custom-instructions)
+recommends. Keep task details in the prompt or spec.
+
 1. Create `.github/copilot-instructions.md` in the repository root with:
 
    ```markdown
    # Project guidelines
 
-   - Tests use xUnit. Use [Theory] with [InlineData] for input/output cases, and Assert.Throws for exceptions.
-   - When fixing a bug, change production code only. Never edit a test just to make it pass.
-   - Explain changes in two or three plain-language sentences; the team is new to C#.
+   - Follow the existing xUnit test style.
+   - Do not weaken tests to hide bugs.
+   - Keep explanations brief and beginner-friendly.
    ```
 
 2. Save it. Run **Chat: Open Customizations** from the Command Palette and select **Instructions** to confirm discovery.
 3. Start a new chat (`Ctrl+N`) with **Agent** and send a prompt without repeating the custom instructions:
 
    ```text
-   Add Calculator.Remainder(int a, int b) using C# integer remainder semantics.
-   Include positive and negative inputs and a zero divisor. Do not add dependencies.
+   Add and test Calculator.Remainder(int a, int b).
+   Cover positive/negative inputs and division by zero. No new dependencies.
    Run dotnet test.
    ```
 
 4. Check the response's **References** section for the instructions file, where available. Discovery alone does not prove that guidance was included or followed.
 
-> Checkpoint: Review the changes and run `dotnet test`. Input/output tests should follow the existing theory style. Check `7 % 2 = 1`, `-7 % 2 = -1`, and a `DivideByZeroException` for a zero divisor. Confirm the explanation follows your guidance.
+> Checkpoint: Review the changes and run `dotnet test`. Check xUnit style, `7 % 2 = 1`, `-7 % 2 = -1`, and a `DivideByZeroException` for a zero divisor. Confirm the explanation is brief and beginner-friendly.
 
 For an offline reference, copy `solution/Calculator.cs` to `src/PromptLab/Calculator.cs` and `solution/RemainderTests.cs` to `tests/PromptLab.Tests/RemainderTests.cs`. Run `dotnet test`. This verifies the implementation, not instruction loading.
 
 ---
-
-## Older advice you can skip
-
-You may see these in older Copilot training. In a Copilot harness session, do this instead:
-
-| Older advice | Do this now |
-| --- | --- |
-| `/fix`, `/tests`, `/explain` | Say it in plain language, for example "Fix this failure and run the tests." Type `/` to see commands available in your session. Use `/plan` when you need a plan. |
-| `@workspace` or other `@` participants | Not supported in Copilot harness sessions. Attach files with `#`, or ask and let the agent search. |
-| "Output a unified diff only" for an implementation task | Agent can edit files directly. Review the changes with `git diff`. A response format is still useful for explanations and read-only reviews. |
-| "Act as a mentor" at the start of every chat | State the audience and desired explanation directly. Optionally put recurring preferences in `.github/copilot-instructions.md`. |
-| Ask / Edit / Agent *modes* | Pick **Copilot** as Session Target, then an agent (**Ask**, **Agent**, or `/plan`) and a permission level. |
 
 ## Troubleshooting
 
