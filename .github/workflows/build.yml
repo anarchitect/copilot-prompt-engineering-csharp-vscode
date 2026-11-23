@@ -1,0 +1,25 @@
+name: build-and-test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - run: dotnet build PromptLab.slnx --warnaserror
+      - name: Test the starter
+        run: dotnet test PromptLab.slnx --no-build
+      - name: Test the exercise path and reference solution
+        shell: pwsh
+        run: ./scripts/Test-Solution.ps1
