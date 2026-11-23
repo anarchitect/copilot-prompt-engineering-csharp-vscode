@@ -2,7 +2,7 @@ namespace PromptLab.Tests;
 
 public class CalculatorTests
 {
-    // One-shot example from Exercise 1, step 4.
+    // One-shot example from Exercise 1, step 5.
     [Theory]
     [InlineData(2, 3, 5)]
     [InlineData(-4, 1, -3)]
@@ -40,20 +40,5 @@ public class CalculatorTests
     public void Divide_ByZero_Throws()
     {
         Assert.Throws<DivideByZeroException>(() => Calculator.Divide(1, 0));
-    }
-
-    // Bonus: Remainder, added with custom instructions in place.
-    [Theory]
-    [InlineData(7, 2, 1)]
-    [InlineData(-7, 2, -1)]
-    public void Remainder_ReturnsRemainder(int a, int b, int expected)
-    {
-        Assert.Equal(expected, Calculator.Remainder(a, b));
-    }
-
-    [Fact]
-    public void Remainder_ByZero_Throws()
-    {
-        Assert.Throws<DivideByZeroException>(() => Calculator.Remainder(1, 0));
     }
 }

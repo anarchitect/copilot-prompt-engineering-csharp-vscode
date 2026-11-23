@@ -1,49 +1,54 @@
 # Prompt engineering with GitHub Copilot in VS Code (C#)
 
-> **Current as of November 2026:** VS Code 1.146, .NET 10 (LTS), GitHub Copilot with the **Copilot harness**.
-> A 30-minute, hands-on exercise for beginners. Local VS Code on Windows only.
+Documentation checked on 23 November 2026 against [VS Code 1.147](https://code.visualstudio.com/updates/v1_147).
+This lab uses local VS Code on Windows, .NET 10 (LTS), and the Copilot harness.
+Allow about 20 minutes for the core lab, after installing the prerequisites.
+The two optional exercises add about 8 minutes. These are planning estimates, not measured completion times.
+Timebox each exercise. If suggestions stall, use the reference fallback rather than waiting.
 
-You will practise the prompt techniques that still matter most:
+You will practise:
 
-1. **Show an example** (zero-shot vs one-shot).
-2. **Be specific:** goal, examples, constraints, and how to check.
-3. **One step at a time:** generate, test, then repair with the exact error.
-4. **Write your rules down once** with custom instructions (bonus).
+1. Showing an example (zero-shot vs one-shot).
+2. Stating the goal, examples, constraints, and checks.
+3. Generating tests, running them, and repairing code with the exact error.
+4. Specifying a useful response format (optional).
+5. Reusing project guidance with custom instructions (optional).
 
 | Part | Time |
 | --- | --- |
 | Setup | 4 min |
-| Exercise 1: Show an example | 7 min |
-| Exercise 2: Make a vague prompt specific | 7 min |
-| Exercise 3: Repair with the exact error | 7 min |
-| Bonus: Custom instructions | 5 min |
+| Exercise 1: show an example | 5 min |
+| Exercise 2: make a vague prompt specific | 5 min |
+| Exercise 3: repair with the exact error | 6 min |
+| Optional: improve the response format | 3 min |
+| Optional: custom instructions | 5 min |
 
 ## The prompt recipe
 
 Use this checklist for every prompt in this exercise. It comes from GitHub's
 [prompt engineering guidance](https://docs.github.com/copilot/concepts/prompting-and-context/prompt-engineering).
 
-1. **Goal first.** Start with what you want, then list the details. Most important requirements first.
-2. **Context.** Open or attach the files that matter. Close the ones that don't.
-3. **Examples.** Give sample inputs and outputs, or a sample test.
-4. **Constraints.** Say what must *not* change, and do one step at a time.
-5. **Check.** Say how to verify the result, such as "run `dotnet test`". Then review it yourself.
+1. Goal: start with what you want, then list the details. Put important requirements first.
+2. Context: open relevant files for inline suggestions, or attach them to chat.
+3. Examples: give sample inputs and outputs, or a sample test.
+4. Constraints: say what must not change. Split larger tasks into steps.
+5. Check: say how to verify the result, such as "run `dotnet test`". Review it yourself.
 
 ---
 
-## Setup (≈4 min)
+## Setup (about 4 min)
 
-**You need:**
+Install these before the lab:
 
-1. VS Code 1.146 or later, signed in to GitHub Copilot (**Help > About** shows the version).
-2. A .NET 10 SDK, 10.0.100 or later: <https://dotnet.microsoft.com/download/dotnet/10.0>.
+1. Current stable VS Code, signed in with an account that has GitHub Copilot access. **Help > About** shows the version.
+2. A .NET 10 SDK, 10.0.100 or later: <https://dotnet.microsoft.com/download/dotnet/10.0>. Install the latest serviced .NET 10 SDK; a .NET 11 SDK alone does not satisfy this project's `global.json`.
 3. The **C# Dev Kit** extension. VS Code recommends it when you open the folder.
 4. Git.
 
 > [!NOTE]
 > Company account? Ask your admin whether Copilot agents are allowed. Use only this sample code; never paste secrets or customer data into a prompt.
 
-**Steps:**
+Steps:
 
 1. Clone and open the repository:
 
@@ -53,7 +58,7 @@ Use this checklist for every prompt in this exercise. It comes from GitHub's
    code .
    ```
 
-2. If VS Code asks, select **Yes, I trust the authors** (agents can't edit files in Restricted Mode).
+2. Review the sample repository before trusting it. If VS Code asks, select **Yes, I trust the authors** only if you trust this code. Agents can't edit files in Restricted Mode.
 3. Open the terminal (`` Ctrl+` ``) and run:
 
    ```powershell
@@ -64,36 +69,43 @@ Use this checklist for every prompt in this exercise. It comes from GitHub's
 
    | Control | Choose |
    | --- | --- |
-   | **Session Target** | **Copilot** (the default; don't pick *Local*, which is being retired) |
+   | **Session Target** | **Copilot** (not **Cloud** or **Local**) |
    | **Agent** | Each exercise tells you: **Ask** or **Agent** |
    | **Language model** | **Auto**, or any model you have |
    | **Permissions** | **Manual permissions** |
 
-> **✅ Checkpoint 1:** `dotnet test` reports **Passed: 1**, and the chat input shows **Copilot** as the Session Target.
+   The harness controls how the agent works; it is separate from the language model.
+   Copilot can work on your local files. **Local** is the deprecated harness name, not a requirement for running on Windows.
+   The [harness guide](https://code.visualstudio.com/docs/agents/run/agent-harnesses) lists its planned removal in February 2027.
+   Keep **Manual permissions**. Review a requested action before choosing **Allow Once**; some commands can run without a prompt.
 
-**What's in the project:**
+> Checkpoint 1: `dotnet test` reports `Passed: 1`. Choose **Copilot** before sending the first chat prompt.
 
-1. `src/PromptLab/Calculator.cs`: `Add`, `Subtract`, `Multiply`, `Divide` for whole numbers.
-2. `src/PromptLab/Slug.cs`: turns a blog title into a URL slug, like `Hello World` → `hello-world`. **It has a bug.** Don't fix it yet.
+What's in the project:
+
+1. `src/PromptLab/Calculator.cs`: `Add`, `Subtract`, `Multiply`, `Divide` for integers.
+2. `src/PromptLab/Slug.cs`: turns a blog title into a URL slug, like `Hello World` → `hello-world`. It has a bug. Don't fix it yet.
 3. `tests/PromptLab.Tests`: xUnit tests. You will add more.
+4. `solution/`: reference answers, not compiled by `PromptLab.slnx`. Don't attach them to the exercise prompts.
 
 ---
 
-## Exercise 1: Show an example (≈7 min)
+## Exercise 1: show an example (about 5 min)
 
-**Technique:** Copilot copies the patterns it can see. A prompt with no example is *zero-shot*; adding one example is *one-shot*.
-Ghost text (the dimmed suggestion at your cursor) uses your **open files** as context, so open the right ones.
+A prompt with no example is called zero-shot; adding one example is one-shot.
+Both still have context from your code. Copilot can follow a visible pattern, but suggestions vary.
+Ghost text (the dimmed suggestion at your cursor) uses current and open files as context.
 
 1. Close all editor tabs. Open `src/PromptLab/Calculator.cs`, then `tests/PromptLab.Tests/CalculatorTests.cs`.
-2. **Zero-shot.** In `CalculatorTests.cs`, replace the line `// Exercise 1 starts here.` with this comment, then press `Enter`:
+2. In `CalculatorTests.cs`, replace the line `// Exercise 1 starts here.` with this zero-shot comment, then press `Enter`:
 
    ```csharp
    // Test Subtract
    ```
 
-3. Wait for the dimmed suggestion. If none appears, open the Command Palette (`Ctrl+Shift+P`) and run **Trigger Inline Suggestion**. Press `Tab` to accept it. Note the style it chose (often a single `[Fact]` with one hard-coded case).
+3. Wait for a suggestion. If none appears, run **Trigger Inline Suggestion** from the Command Palette (`Ctrl+Shift+P`). Review it before pressing `Tab`. Note whether it chose a `[Fact]` or a `[Theory]`. Neither outcome is guaranteed.
 4. Delete the comment and the generated test.
-5. **One-shot.** Paste this example test and comment inside the class:
+5. Paste this one-shot example test and comment inside the class:
 
    ```csharp
    [Theory]
@@ -108,20 +120,24 @@ Ghost text (the dimmed suggestion at your cursor) uses your **open files** as co
    // Divide is integer division (7 / 2 = 3) and throws DivideByZeroException when b is 0.
    ```
 
-6. Put the cursor at the end of the last comment line and press `Enter`. Accept each suggestion with `Tab`, then press `Enter` for the next one, until all three operations are tested.
-   Hover over a suggestion to show its toolbar, where you can step through alternative suggestions.
+6. Put the cursor at the end of the last comment line and press `Enter`. Review each suggestion before accepting it with `Tab`. Request tests for the missing operations if needed.
+   Hover over a suggestion to compare alternatives, when offered.
 7. Save (`Ctrl+S`) and run `dotnet test`.
 
-> **✅ Checkpoint 2:** The new tests use `[Theory]` and `[InlineData]` like your example, and `dotnet test` reports **Failed: 0**.
->
-> A test failed? Check its expected value. Copilot can guess wrong (for example `7 / 2 = 3.5`); correct it by hand.
-> No ghost text at all? Select the comment, press `Ctrl+I`, type `Write these tests`, and press `Enter`.
+> Checkpoint 2: Add, Subtract, Multiply, and Divide have input/output tests. Check integer division (`7 / 2 = 3`, `-7 / 2 = -3`) and an `Assert.Throws<DivideByZeroException>` test for a zero divisor. Use `[Theory]`/`[InlineData]` for multiple input/output cases; an exception test can use `[Fact]`. All tests pass.
+
+If suggestions stop, select the comments and use `Ctrl+I` with: `Add xUnit tests for Subtract, Multiply and Divide in the style of Add_ReturnsSum. Include integer division and a zero divisor. Change only CalculatorTests.cs.`
+Review the resulting diff before keeping it.
+If AI is unavailable or you are running out of time, copy [`solution/CalculatorTests.cs`](solution/CalculatorTests.cs) over the exercise test file and run `dotnet test`.
+This fallback completes the code checkpoint, not the AI comparison.
+
+If a test fails, compare its expected value with the calculator's documented behavior. Correct an incorrect generated assertion; do not change correct tests merely to get a passing run.
 
 ---
 
-## Exercise 2: Make a vague prompt specific (≈7 min)
+## Exercise 2: make a vague prompt specific (about 5 min)
 
-**Technique:** A vague prompt makes Copilot guess. Tests written from guesses often lock in today's bugs.
+A vague prompt leaves requirements unstated. Tests based on existing behavior can preserve a bug.
 
 1. In the Chat view, start a new chat (`Ctrl+N`). Check **Copilot**, set the agent to **Ask** (read-only), and send:
 
@@ -129,7 +145,7 @@ Ghost text (the dimmed suggestion at your cursor) uses your **open files** as co
    write tests for slug
    ```
 
-2. Read the answer. What did Copilot have to guess: the language, the test framework, the rules? Did it test what `Slug.Create` *should* do, or what it does *today*? Don't apply anything.
+2. Read the answer. Which details came from the repository, and which did Copilot assume? Did it test what `Slug.Create` should do, or what it does today? Don't apply anything.
 3. Start a new chat (`Ctrl+N`) and set the agent to **Agent**. Type `#` and choose `src/PromptLab/Slug.cs`, then type `#` again and choose `tests/PromptLab.Tests/SlugTests.cs` (not the copies in `solution/`). Then paste and send:
 
    ```text
@@ -151,24 +167,41 @@ Ghost text (the dimmed suggestion at your cursor) uses your **open files** as co
    "!!!" -> ""
 
    Use one [Theory] with [InlineData] for the examples and a [Fact] for null.
+   Keep the existing passing test. Do not add dependencies.
    Step 1 only: change only that test file. Do not change src/PromptLab/Slug.cs, even if tests fail.
    Run dotnet test and tell me which tests fail.
    ```
 
-   This prompt follows the recipe: **goal** (first line), **context** (`#` files), **examples** (the list), **constraints** ("Step 1 only", "Do not change Slug.cs"), and **check** ("Run dotnet test").
+   Compare this prompt with the recipe: goal, attached files, examples, a file boundary, and a test command.
 
-4. Approve the `dotnet test` command when asked. Open each file from the changed-files list in the Chat view, review the highlighted edits, and select **Keep** (or **Undo**). Edits are already saved to disk.
+4. Review and approve the `dotnet test` command if asked. Inspect the diff of `SlugTests.cs` from the response. The experimental editor working set above the chat input offers **Keep** and **Undo** for tracked edits. Edits are already saved; **Keep** clears the pending-review state.
+   Also run these commands, because edits made through terminal commands might not appear in that list:
 
-> **✅ Checkpoint 3:** `SlugTests.cs` has the new tests, `Slug.cs` is unchanged (`git status`), and the agent reports **3 failing** cases: `"  Hello,   World!  "`, `"Hello,World"` and `"C# & .NET 10"`.
-> These failures are good: they are the bug, found by the spec. If the agent changed `Slug.cs`, select **Undo** for that file.
+   ```powershell
+   git diff -- src/PromptLab/Slug.cs
+   git diff -- tests/PromptLab.Tests/SlugTests.cs
+   dotnet test
+   ```
+
+> Checkpoint 3: The first diff is empty. The second adds the seven examples and the null test without removing the original test. With exactly those tests, there are 3 failures: `"  Hello,   World!  "`, `"Hello,World"` and `"C# & .NET 10"`. Their actual values are `"--hello---world--"`, `"helloworld"` and `"c--net-10"`, respectively.
+> If the agent changed production code, undo only that unintended edit. If it generated different tests, compare them with the prompt before expecting the same count.
+
+If AI is unavailable, copy [`solution/SlugTests.cs`](solution/SlugTests.cs) over the exercise test file and run `dotnet test`. Keep the failing tests for the repair step.
 
 ---
 
-## Exercise 3: Repair with the exact error (≈7 min)
+## Exercise 3: repair with the exact error (about 6 min)
 
-**Technique:** Generate, test, repair. Give Copilot the *exact* failure text, not "it's broken", and limit what it may change.
+Give Copilot the exact failure text, not "it's broken", and limit what it may change.
 
-1. In the terminal, run `dotnet test`. Select the three `[FAIL]` lines and their `Expected` / `Actual` lines, and copy them (`Ctrl+C`).
+1. Before the repair, record the current test-file changes:
+
+   ```powershell
+   git diff -- tests/PromptLab.Tests
+   dotnet test
+   ```
+
+   Copy the failing test names and their `Expected` / `Actual` lines (`Ctrl+C`). Use your actual output, including any additional failures.
 2. In the **same** chat (it already knows the task), type this prompt, pasting your failure output where shown:
 
    ```text
@@ -181,24 +214,52 @@ Ghost text (the dimmed suggestion at your cursor) uses your **open files** as co
    Run dotnet test and explain the fix in two sentences.
    ```
 
-3. Approve `dotnet test`. Open `Slug.cs` from the changed-files list in the Chat view, review the edits, then select **Keep**.
+3. Review any requested actions. Inspect the `Slug.cs` diff and keep it only if it meets the spec.
 4. Confirm it yourself:
 
    ```powershell
    dotnet test
-   git status
+   git diff -- src/PromptLab/Slug.cs
+   git diff -- tests/PromptLab.Tests
    ```
 
-> **✅ Checkpoint 4:** `dotnet test` reports **Failed: 0**. In this step only `Slug.cs` changed; no tests were weakened.
-> Still red? Paste the *new* failure into the same chat and repeat step 2.
+> Checkpoint 4: All tests pass. The source diff implements the spec. The test diff is identical to the one you recorded before the repair.
+> `git diff` is cumulative from the last commit, so earlier exercise tests should still appear. `git status` alone cannot prove that no tests changed during this step.
+
+If tests still fail, paste the new failure into the same chat and repeat step 2.
+If AI is unavailable, copy [`solution/Slug.cs`](solution/Slug.cs) over the exercise source file and rerun the checks. Do not copy or weaken tests during the repair.
 
 ---
 
-## Bonus: Write your rules down once (≈5 min)
+## Optional: improve the response format (about 3 min)
 
-**Technique:** Instead of repeating "use `[Theory]`" or "don't edit tests" in every prompt, put the rules in a custom instructions file. Copilot adds it to chat requests in this repo. It doesn't affect ghost text.
+Use an output contract when you need a reviewable answer, not another code edit.
 
-1. Create `.github/copilot-instructions.md` with:
+1. Start a new **Ask** chat. Attach the repaired `src/PromptLab/Slug.cs` and `tests/PromptLab.Tests/SlugTests.cs`. Paste the source diff from Exercise 3 to show the original code, then send `Explain this fix`.
+2. Read the answer, then ask it to revise that response:
+
+   ```text
+   Rewrite your explanation for a beginner reviewing this repair.
+   Return exactly three bullets, in this order:
+   - Cause: explain the original bug in one sentence.
+   - Change: explain how the repaired code handles separators in one sentence.
+   - Check: give the command I should run and one test example with its expected result.
+   No code blocks or introductory paragraph. Do not edit files.
+   Do not claim you ran tests. If a claim is not supported by the attached files
+   or this conversation, say what needs checking instead of inventing evidence.
+   ```
+
+3. Check the format and facts against the files. Run `dotnet test` yourself.
+
+> Checkpoint: The answer separates cause, change, and verification. It suggests a check rather than claiming an unobserved test run. A shorter answer is useful only if it remains accurate.
+
+## Optional: write your rules down once (about 5 min)
+
+Custom instructions store reusable project guidance for chat requests.
+They do not affect ghost text and do not guarantee compliance.
+Existing tests already show a style, so matching that style does not by itself prove the instructions were used.
+
+1. Create `.github/copilot-instructions.md` in the repository root with:
 
    ```markdown
    # Project guidelines
@@ -208,15 +269,20 @@ Ghost text (the dimmed suggestion at your cursor) uses your **open files** as co
    - Explain changes in two or three plain-language sentences; the team is new to C#.
    ```
 
-2. Save it. Optional: run **Chat: Open Customizations** from the Command Palette and select **Instructions** to see it listed.
-3. Start a new chat (`Ctrl+N`) with **Agent** and send a short prompt that doesn't mention any rules:
+2. Save it. Run **Chat: Open Customizations** from the Command Palette and select **Instructions** to confirm discovery.
+3. Start a new chat (`Ctrl+N`) with **Agent** and send a prompt without repeating the custom instructions:
 
    ```text
-   Add Calculator.Remainder(int a, int b) with tests. Run dotnet test.
+   Add Calculator.Remainder(int a, int b) using C# integer remainder semantics.
+   Include positive and negative inputs and a zero divisor. Do not add dependencies.
+   Run dotnet test.
    ```
 
-> **✅ Checkpoint 5:** Without being told in the prompt, the new tests use `[Theory]`/`[InlineData]` (and `Assert.Throws` for dividing by zero), the explanation is short, and `dotnet test` reports **Failed: 0**.
-> Instructions guide Copilot; they don't guarantee it. Always review the result.
+4. Check the response's **References** section for the instructions file, where available. Discovery alone does not prove that guidance was included or followed.
+
+> Checkpoint: Review the changes and run `dotnet test`. Input/output tests should follow the existing theory style. Check `7 % 2 = 1`, `-7 % 2 = -1`, and a `DivideByZeroException` for a zero divisor. Confirm the explanation follows your guidance.
+
+For an offline reference, copy `solution/Calculator.cs` to `src/PromptLab/Calculator.cs` and `solution/RemainderTests.cs` to `tests/PromptLab.Tests/RemainderTests.cs`. Run `dotnet test`. This verifies the implementation, not instruction loading.
 
 ---
 
@@ -226,11 +292,11 @@ You may see these in older Copilot training. In a Copilot harness session, do th
 
 | Older advice | Do this now |
 | --- | --- |
-| `/fix`, `/tests`, `/explain` | Say it in plain language, for example "Fix this failure and run the tests." Type `/` to see current commands (`/plan`, `/compact`, `/fork`). |
+| `/fix`, `/tests`, `/explain` | Say it in plain language, for example "Fix this failure and run the tests." Type `/` to see commands available in your session. Use `/plan` when you need a plan. |
 | `@workspace` or other `@` participants | Not supported in Copilot harness sessions. Attach files with `#`, or ask and let the agent search. |
-| "Output a unified diff only" or "output code only" | The agent edits files directly. Review its changes with **Keep**/**Undo** in the Chat view and with `git diff`. |
+| "Output a unified diff only" for an implementation task | Agent can edit files directly. Review the changes with `git diff`. A response format is still useful for explanations and read-only reviews. |
 | `Ctrl+Enter` completions panel | Hover over a ghost-text suggestion and use its toolbar to step through alternatives. |
-| "Act as a mentor" at the start of every chat | Put lasting preferences in `.github/copilot-instructions.md`. |
+| "Act as a mentor" at the start of every chat | State the audience and desired explanation directly. Optionally put recurring preferences in `.github/copilot-instructions.md`. |
 | Ask / Edit / Agent *modes* | Pick **Copilot** as Session Target, then an agent (**Ask**, **Agent**, or `/plan`) and a permission level. |
 
 ## Troubleshooting
@@ -238,14 +304,39 @@ You may see these in older Copilot training. In a Copilot harness session, do th
 | Problem | Fix |
 | --- | --- |
 | No Copilot features | Sign in from the Copilot menu in the Status Bar. |
-| **Copilot** missing from Session Target | Update VS Code to 1.146 or later, or ask your admin. |
-| No ghost text | Run **Trigger Inline Suggestion**, or use `Ctrl+I` with the same comment as the prompt. |
+| **Copilot** missing from Session Target | Update to your organization's current approved VS Code release and check [harness requirements](https://code.visualstudio.com/docs/agents/run/agent-harnesses#_copilot). Ask your admin if access is restricted. |
+| No ghost text | Check that inline suggestions are enabled for C# in the Copilot menu. Run **Trigger Inline Suggestion**, try `Ctrl+I`, or use the reference fallback. |
 | Agent can't edit files | Trust the folder: run **Workspaces: Manage Workspace Trust**. |
 | `dotnet` or the SDK not found | Install a .NET 10 SDK, then restart VS Code. |
-| `warning NU1900` during build | NuGet can't reach its vulnerability feed (common on company networks). Safe to ignore here. |
+| `warning NU1900` during build | NuGet couldn't retrieve vulnerability data. Check connectivity, proxy configuration, and NuGet feeds; this warning is not evidence that packages are safe. A warnings-as-errors build needs the feed issue resolved. |
 | `Ctrl+I` opens **Ask in Chat** | The file is in a chat session; that's fine, or set `inlineChat.askInChat` to `false`. |
 | Answers drift or get slow | Start a new chat (`Ctrl+N`) for each new task. |
 | Stuck | Compare with the reference answers in [`solution/`](solution). |
+
+## Validate the reference path
+
+Maintainers can run these from a fresh clone with unchanged starter files in PowerShell 7:
+
+```powershell
+dotnet build PromptLab.slnx --warnaserror
+dotnet test PromptLab.slnx --no-build
+.\scripts\Test-Solution.ps1
+```
+
+The script uses a disposable copy under `.validation/` and removes it afterwards.
+It checks the starter, each core code checkpoint, and the optional remainder implementation separately:
+
+| Reference stage | Passed | Failed | Total |
+| --- | --- | --- | --- |
+| Starter | 1 | 0 | 1 |
+| Exercise 1 | 10 | 0 | 10 |
+| Exercise 2 | 15 | 3 | 18 |
+| Exercise 3 | 18 | 0 | 18 |
+| Optional remainder | 21 | 0 | 21 |
+
+These counts describe the supplied reference tests, not every possible Copilot response.
+The checks do not invoke Copilot or verify VS Code controls, response wording, or instruction loading.
+The CI workflow runs the build, starter tests, and script on Windows and Linux; the learner steps remain Windows-focused.
 
 ## Quick reference
 
@@ -268,6 +359,10 @@ You may see these in older Copilot training. In a Copilot harness session, do th
 5. [AI features cheat sheet](https://code.visualstudio.com/docs/agents/reference/ai-features-cheat-sheet)
 6. [Choose an agent harness](https://code.visualstudio.com/docs/agents/run/agent-harnesses)
 7. Companion exercise: [Using GitHub Copilot with C# in VS Code](https://github.com/anarchitect/using-github-copilot-with-csharp-vscode)
+8. [Review AI-generated code edits](https://code.visualstudio.com/docs/agents/run/review-code-edits)
+9. [Manage approvals and permissions](https://code.visualstudio.com/docs/agents/run/approvals)
+10. [Plan work with agents](https://code.visualstudio.com/docs/agents/run/planning). Use `/plan` for larger tasks; it is not needed for this small repair. `/research` is a preview limited to VS Code Insiders.
+11. [.NET support policy](https://dotnet.microsoft.com/platform/support/policy/dotnet-core)
 
 ## Attribution and license
 

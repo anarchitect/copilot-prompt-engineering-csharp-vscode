@@ -1,16 +1,15 @@
 #requires -Version 7
 <#
 .SYNOPSIS
-  Checks the exercise end to end on a temporary copy of the repository:
-  1. After Exercise 2 (example-based Slug tests added), dotnet test must FAIL on the two buggy cases.
-  2. After Exercise 3 and the bonus (reference solution applied), dotnet test must PASS.
+  Checks the starter, each core exercise, and optional remainder tests on a disposable copy.
+  Uses structured test results to distinguish expected assertion failures from build failures.
 #>
 [CmdletBinding()]
 param()
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
-$work = Join-Path ([IO.Path]::GetTempPath()) "promptlab-$([guid]::NewGuid().ToString('N'))"
+$work = Join-Path $repo ".validation/promptlab-$([guid]::NewGuid().ToString('N'))"
 
 try {
     New-Item -ItemType Directory -Path $work | Out-Null
@@ -29,22 +28,55 @@ try {
         (Get-Item (Join-Path $Destination $File)).LastWriteTime = Get-Date
     }
 
-    Write-Host '== Stage 1: Exercise 2 tests on the buggy starter (expect 3 failures) =='
-    Copy-Fresh 'SlugTests.cs' $tests
-    $out = & dotnet test (Join-Path $work 'PromptLab.slnx') 2>&1 | Out-String
-    Write-Host $out
-    if ($LASTEXITCODE -eq 0) { throw 'Expected failing tests before the repair step, but dotnet test passed.' }
-    if ($out -notmatch 'Failed:\s+3\b') { throw 'Expected exactly 3 failing tests before the repair step.' }
-    foreach ($case in '  Hello,   World!  ', 'Hello,World', 'C# & .NET 10') {
-        if (-not $out.Contains("title: `"$case`"")) { throw "Expected a failure for '$case'." }
+    function Test-Stage([string]$Name, [int]$Passed, [int]$Failed) {
+        $results = Join-Path $work "TestResults/$Name"
+        $out = & dotnet test (Join-Path $work 'PromptLab.slnx') --logger 'trx;LogFileName=results.trx' --results-directory $results 2>&1 | Out-String
+        $exitCode = $LASTEXITCODE
+        [xml]$trx = Get-Content (Join-Path $results 'results.trx') -Raw
+        $counts = $trx.TestRun.ResultSummary.Counters
+        if ([int]$counts.passed -ne $Passed -or [int]$counts.failed -ne $Failed -or
+            [int]$counts.total -ne ($Passed + $Failed) -or
+            ($Failed -eq 0 -and $exitCode -ne 0) -or ($Failed -gt 0 -and $exitCode -ne 1)) {
+            Write-Host $out
+            throw "Unexpected results at $Name (expected $Passed passed, $Failed failed)."
+        }
+        Write-Host "$Name : $Passed passed, $Failed failed, $($Passed + $Failed) total"
+        return $trx
     }
 
-    Write-Host '== Stage 2: reference solution (expect all tests to pass) =='
-    Copy-Fresh 'Slug.cs' $src
-    Copy-Fresh 'Calculator.cs' $src
+    Test-Stage 'starter' 1 0 | Out-Null
     Copy-Fresh 'CalculatorTests.cs' $tests
-    & dotnet test (Join-Path $work 'PromptLab.slnx')
-    if ($LASTEXITCODE -ne 0) { throw 'Reference solution tests failed.' }
+    Test-Stage 'exercise-1' 10 0 | Out-Null
+
+    $slugHash = (Get-FileHash (Join-Path $src 'Slug.cs')).Hash
+    Copy-Fresh 'SlugTests.cs' $tests
+    $trx = Test-Stage 'exercise-2' 15 3
+    if ((Get-FileHash (Join-Path $src 'Slug.cs')).Hash -ne $slugHash) {
+        throw 'Exercise 2 changed Slug.cs.'
+    }
+    $failures = @($trx.TestRun.Results.UnitTestResult | Where-Object outcome -eq 'Failed')
+    foreach ($case in '  Hello,   World!  ', 'Hello,World', 'C# & .NET 10') {
+        $match = @($failures | Where-Object { $_.testName.Contains("title: `"$case`"") })
+        if ($match.Count -ne 1 -or $match[0].Output.ErrorInfo.Message -notmatch 'Assert.Equal') {
+            throw "Expected an assertion failure for '$case'."
+        }
+    }
+
+    $beforeRepair = @{}
+    Get-ChildItem $tests -Filter '*.cs' | ForEach-Object {
+        $beforeRepair[$_.Name] = (Get-FileHash $_.FullName).Hash
+    }
+    Copy-Fresh 'Slug.cs' $src
+    Test-Stage 'exercise-3' 18 0 | Out-Null
+    foreach ($file in Get-ChildItem $tests -Filter '*.cs') {
+        if ($beforeRepair[$file.Name] -ne (Get-FileHash $file.FullName).Hash) {
+            throw "The repair changed tests in $($file.Name)."
+        }
+    }
+
+    Copy-Fresh 'Calculator.cs' $src
+    Copy-Fresh 'RemainderTests.cs' $tests
+    Test-Stage 'optional-remainder' 21 0 | Out-Null
 
     Write-Host 'Solution check passed.'
 }
